@@ -13,12 +13,8 @@ int main( int argc, char **argv )
   ros::NodeHandle n;
 
   // Open camera with CAMERA_INDEX (webcam is typically #0).
-  //  const std::string videoStreamAddress = "http://10.10.10.13/videostream.cgi?loginuse=admin&amp;loginpas=&.mjpg";
-  //  const std::string videoStreamAddress = "http://admin:@10.10.10.13/mjpeg.cgi?user=admin&password=admin:&channel=0&.mjpg";
-  //const std::string videoStreamAddress = "http://10.10.10.111:81/videostream.cgi?loginuse=admin&amp;loginpas=12345&.mjpg";
-  //const std::string videoStreamAddress = "http://10.10.10.13:34567/videostream.cgi?loginuse=admin&amp;loginpas=&.mjpg";
   const std::string videoStreamAddress = "rtsp://admin:@10.10.10.13/user=admin_password=_channel=1_stream=0.sdp";
-  //const std::string videoStreamAddress = "http://192.168.11.20:81/video?x.mjpeg";
+  
   cv::VideoCapture capture(videoStreamAddress );
   if(!capture.isOpened() )
   {
