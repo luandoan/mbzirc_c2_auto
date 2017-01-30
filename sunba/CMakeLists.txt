@@ -136,13 +136,16 @@ include_directories(
 
 ## Declare a C++ executable
 add_executable(sunba_video src/sunba.cpp)
-
+add_executable(sunba_test src/sunba_test.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(sunba_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(sunba_video
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(sunba_test
   ${catkin_LIBRARIES}
 )
 
