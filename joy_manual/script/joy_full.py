@@ -19,7 +19,7 @@ class joy_ur5():
 
 		self.min_pos = -6.283
 		self.max_pos = 6.283
-		self.step = 0.1
+		self.step = 0.05
 		self.max_acc = 3.0
 		self.last_pan = 0.0
 		self.last_lift = 0.0
@@ -165,6 +165,9 @@ class joy_ur5():
 		wrist2_joint = 'ur5_arm_wrist_2_joint'
 		wrist3_joint = 'ur5_arm_wrist_3_joint'
 
+		#print "CURRENT CONFIGURATION: ", self.state.position
+		#print self.state
+
 		# Moving arm linear step by step
 		if (active_l):
 			# Initialize the move_group API
@@ -177,6 +180,9 @@ class joy_ur5():
 			self.arm = moveit_commander.MoveGroupCommander("ur5_arm")
 			end_effector_link = self.arm.get_end_effector_link()
 			#rospy.loginfo(end_effector_link)
+		
+			current_pose = self.arm.get_current_pose(end_effector_link)
+			print "CURRENT POSE: ", current_pose
 
 			reference_frame = rospy.get_param("~reference_frame", "/base_link")
 
@@ -188,44 +194,64 @@ class joy_ur5():
 			self.arm.set_goal_position_tolerance(0.01)
 			self.arm.set_goal_orientation_tolerance(0.01)
 
+			"""
+			# set new pose
+			self.target_pose = PoseStamped()
+        		self.target_pose.header.frame_id = reference_frame
+			self.target_pose.header.stamp = rospy.Time.now()
+			self.target_pose.pose.position.x = current_pose.pose.position.x
+			self.target_pose.pose.position.y = current_pose.pose.position.y
+			self.target_pose.pose.position.z = current_pose.pose.position.z + 0.1
 			# Get current joint position to use for planning
 			"""
+			cj = self.state.position
+			print "CURRENT STATE: ", cj
 			try:
 				cjs = rospy.get_param('current_joint_state')
 			except:
 				cjs = [0,0,0,0,0,0]
+				#cjs = [cj[6], cj[7], cj[8], cj[9], cj[10], cj[11]]
+			#cjs = self.state.position
+			print "CURRENT ARM: ", cjs
 			jt = RobotState()
 			jt.joint_state.header.frame_id = '/base_link'
 			jt.joint_state.name = ['front_left_wheel', 'front_right_wheel', 'rear_left_wheel', 'rear_right_wheel', 'ur5_arm_shoulder_pan_joint', 'ur5_arm_shoulder_lift_joint', 'ur5_arm_elbow_joint', 'ur5_arm_wrist_1_joint', 'ur5_arm_wrist_2_joint', 'ur5_arm_wrist_3_joint', 'left_tip_hinge', 'right_tip_hinge']
+			#jt.joint_state.position = [0,0,0,0,cjs[6],cjs[7],cjs[8],cjs[9],cjs[10],cjs[11],0,0]
 			jt.joint_state.position = [0,0,0,0,cjs[0],cjs[1],cjs[2],cjs[3],cjs[4],cjs[5],0,0]
 			
 			#crs = robot.get_current_state()
 			# Set the start state to the current state
-			# self.arm.set_start_state(jt)
-			"""
+			self.arm.set_start_state(jt)
+			#"""
 			
 			# Set the start state to the current state
-			self.arm.set_start_state_to_current_state()
+			#self.arm.set_start_state_to_current_state()
+			#traj = self.arm.plan()
+
+			# Set target pose
+			#self.arm.set_pose_target(self.target_pose, end_effector_link)
+			
 
 			if (l_up_vel > 0):
-				self.arm.shift_pose_target(2,0.005, end_effector_link)	
+				self.arm.shift_pose_target(2,0.05, end_effector_link)	
 				print "Linear going up ...", l_up_vel
 			elif (l_up_vel < 0):
-				self.arm.shift_pose_target(2,-0.005, end_effector_link)
+				self.arm.shift_pose_target(2,-0.05, end_effector_link)
 				print "Linear going down ...", l_up_vel
 			elif (l_pan_vel > 0):
-				self.arm.shift_pose_target(1, 0.005, end_effector_link)
+				self.arm.shift_pose_target(1, 0.05, end_effector_link)
 				print "Linear moving right ...", l_pan_vel
 			elif (l_pan_vel < 0):
-				self.arm.shift_pose_target(1,-0.005, end_effector_link)
+				self.arm.shift_pose_target(1,-0.05, end_effector_link)
 				print "Linear moving left ...", l_pan_vel
 			elif (l_push_vel > 0):
-				self.arm.shift_pose_target(0, 0.005, end_effector_link)
+				self.arm.shift_pose_target(0, 0.25, end_effector_link)
 				print "Linear moving forward ...", l_push_vel
 			elif (l_push_vel < 0):
-				self.arm.shift_pose_target(0,-0.005, end_effector_link)
+				self.arm.shift_pose_target(0,-0.25, end_effector_link)
 				print "Linear moving backward ...", l_push_vel
-			
+
+
 			traj = self.arm.plan()
 			traj_pts = len(traj.joint_trajectory.points)
 
@@ -237,7 +263,7 @@ class joy_ur5():
 				self.arm.execute(traj)
 			else:
 				rospy.loginfo("No motion found")
-	
+
 			rospy.set_param('smach_state', 'Linear manual moving arm')
 			#self.arm.go()
 			rospy.sleep(0.01)
@@ -317,39 +343,38 @@ class joy_ur5():
 
 		# Moving gripper
 		if (active_g):
-			try:
-				physical_robot = rospy.get_param('physical_robot')
-			except:
-				physical_robot = 'False'
-			if not physical_robot:
-				grip = Twist()
-				if g_control > 0:
-					grip.linear.x = 0
-					grip.linear.y = 0
-					grip.linear.z = 0
-					grip.angular.x = 0
-					grip.angular.y = 0
-					grip.angular.z = 1
-					print "closing gripper"
-				elif g_control < 0:
-					grip.linear.x = 0
-					grip.linear.y = 0
-					grip.linear.z = 0
-					grip.angular.x = 0
-					grip.angular.y = 0
-					grip.angular.z = -1
-					print "openning gripper"
+			"""	
+			# Physical robot
+			req = Int8()
+			if g_control > 0:
+				req = 2
+			elif g_control < 0:
+				req = 3
+			self.grip_physical_pub.publish(req)
+			rospy.set_param('smach_state','Manual gripper')
+			"""
+			# Simulation gripper
+			grip  = Twist()
+			if g_control > 0:
+				grip.linear.x = 0
+				grip.linear.y = 0
+				grip.linear.z = 0
+				grip.angular.x = 0
+				grip.angular.y = 0
+				grip.angular.z = 1
+				print "opening gripper"
+			elif g_control < 0:
+				grip.linear.x = 0
+				grip.linear.y = 0
+				grip.linear.z = 0
+				grip.angular.x = 0
+				grip.angular.y = 0
+				grip.angular.z = -1
+				print "closing gripper"
 
-				self.grip_gazebo_pub.publish(grip)
-				rospy.set_param('smach_state','Manual gripper')
-			else:
-				req = Int8()
-				if g_control > 0:
-					req = 2
-				elif g_control < 0:
-					req = 3
-				self.grip_physical_pub.publish(req)
-				rospy.set_param('smach_state','Manual gripper')
+			self.grip_gazebo_pub.publish(grip)
+			rospy.set_param('smach_state','Manual gripper')
+
 
 	def joint_state(self, state):
 		self.state = state
