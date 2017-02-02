@@ -1,7 +1,8 @@
+<?xml version="1.0"?>
 <launch>
   <arg name="joy_dev" default="/dev/input/js0" />
   <arg name="joystick" default="true" />
-
+  <param name="use_sim_time" value="false" />
   <node pkg="joy_manual" name="joy_ur5" type="joy_full.py" output="screen">
   </node>
 
